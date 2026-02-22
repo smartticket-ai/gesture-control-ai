@@ -1,13 +1,11 @@
+import mediapipe as mp
 import cv2
-# Importación directa forzada para Python 3.13
-import mediapipe.python.solutions.hands as mp_hands
-import mediapipe.python.solutions.drawing_utils as mp_draw
 
 class HandTracker:
     def __init__(self):
-        # Usamos las variables que importamos directamente arriba
-        self.mp_hands = mp_hands
-        self.mp_draw = mp_draw
+        # Usamos mp.solutions que es la forma oficial
+        self.mp_hands = mp.solutions.hands
+        self.mp_draw = mp.solutions.drawing_utils
         self.hands = self.mp_hands.Hands(
             static_image_mode=False,
             max_num_hands=1,
@@ -16,11 +14,13 @@ class HandTracker:
         )
 
     def detect(self, frame):
-        image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        results = self.hands.process(image_rgb)
+        # MediaPipe necesita la imagen en RGB
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        results = self.hands.process(rgb_frame)
         
         if results.multi_hand_landmarks:
             for hand_landmarks in results.multi_hand_landmarks:
+                # Dibujamos las conexiones (puntos y líneas)
                 self.mp_draw.draw_landmarks(
                     frame, 
                     hand_landmarks, 
