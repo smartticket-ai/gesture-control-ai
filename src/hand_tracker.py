@@ -1,16 +1,14 @@
 import cv2
-import mediapipe as mp
-# Importamos directamente desde la ruta interna para evitar el error de 'solutions'
-from mediapipe.python.solutions import hands as mp_hands
-from mediapipe.python.solutions import drawing_utils as mp_draw
+# Importamos directamente los módulos internos para saltarnos el error
+import mediapipe.python.solutions.hands as mp_hands
+import mediapipe.python.solutions.drawing_utils as mp_draw
 
 class HandTracker:
     def __init__(self):
-        # Asignamos las soluciones importadas
+        # Usamos las importaciones directas que hicimos arriba
         self.mp_hands = mp_hands
         self.mp_draw = mp_draw
         
-        # Inicializamos el detector de manos
         self.hands = self.mp_hands.Hands(
             static_image_mode=False,
             max_num_hands=1,
@@ -19,13 +17,13 @@ class HandTracker:
         )
 
     def detect(self, frame):
-        # MediaPipe necesita la imagen en formato RGB
+        # Convertir a RGB para MediaPipe
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = self.hands.process(rgb_frame)
         
-        # Si detecta una mano, dibujamos los 21 puntos de referencia
         if results.multi_hand_landmarks:
             for hand_landmarks in results.multi_hand_landmarks:
+                # Dibujar los puntos sobre el frame
                 self.mp_draw.draw_landmarks(
                     frame, 
                     hand_landmarks, 
