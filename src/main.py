@@ -1,25 +1,33 @@
 from camera import Camera
 from hand_tracker import HandTracker
+from gesture_classifier import GestureClassifier
+from controller import Controller
 import cv2
 
 def main():
     cam = Camera()
     tracker = HandTracker()
-
-    print("Sistema iniciado. Presiona 'q' para salir.")
+    classifier = GestureClassifier()
+    control = Controller()
 
     while True:
         frame = cam.get_frame()
-        if frame is None:
-            break
+        if frame is None: break
 
-        # Detectar mano y dibujar puntos
         landmarks = tracker.detect(frame)
+        
+        if landmarks:
+            gesture = classifier.classify(landmarks)
+            if gesture:
+                # Dibujamos el nombre del gesto en la pantalla
+                cv2.putText(frame, f"Gesto: {gesture}", (10, 50), 
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                
+                # Ejecutamos la acción en el PC
+                control.execute(gesture, landmarks)
 
-        # Mostrar la ventana
-        cv2.imshow("Control Gestual AI", frame)
+        cv2.imshow("Sistema de Control Gestual", frame)
 
-        # Salir con la tecla 'q'
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
