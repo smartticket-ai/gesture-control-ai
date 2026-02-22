@@ -1,7 +1,7 @@
-from camera import Camera
-from hand_tracker import HandTracker
-from gesture_classifier import GestureClassifier
-from controller import Controller
+from .camera import Camera
+from .hand_tracker import HandTracker
+from .gesture_classifier import GestureClassifier
+from .controller import Controller
 import cv2
 
 def main():
