@@ -1,12 +1,11 @@
+import mediapipe as mp
 import cv2
-# Importaciones directas y profundas para saltarse el error de Python 3.13
-import mediapipe.python.solutions.hands as mp_hands
-import mediapipe.python.solutions.drawing_utils as mp_draw
 
 class HandTracker:
     def __init__(self):
-        self.mp_hands = mp_hands
-        self.mp_draw = mp_draw
+        # ¡La forma oficial ahora sí funciona!
+        self.mp_hands = mp.solutions.hands
+        self.mp_draw = mp.solutions.drawing_utils
         
         self.hands = self.mp_hands.Hands(
             static_image_mode=False,
@@ -16,7 +15,6 @@ class HandTracker:
         )
 
     def detect(self, frame):
-        # MediaPipe procesa en RGB
         image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = self.hands.process(image_rgb)
         
