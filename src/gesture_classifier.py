@@ -1,24 +1,22 @@
-import mediapipe as mp
-import cv2
-
-class HandTracker:
-    def __init__(self):
-        # Acceso directo a las soluciones de mediapipe
-        self.mp_hands = mp.solutions.hands
-        self.mp_draw = mp.solutions.drawing_utils
-        self.hands = self.mp_hands.Hands(
-            static_image_mode=False,
-            max_num_hands=1,
-            min_detection_confidence=0.7,
-            min_tracking_confidence=0.5
-        )
-
-    def detect(self, frame):
-        image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        results = self.hands.process(image_rgb)
+class GestureClassifier:
+    def classify(self, landmarks):
+        if not landmarks:
+            return None
         
-        if results.multi_hand_landmarks:
-            for hand_landmarks in results.multi_hand_landmarks:
-                self.mp_draw.draw_landmarks(
-                    frame, hand_landmarks, self.mp_hands.HAND_CONNECTIONS)
-        return results.multi_hand_landmarks
+        hand = landmarks[0]
+        fingers = []
+
+        # Puntos de las puntas de los dedos: Índice(8), Medio(12), Anular(16), Meñique(20)
+        # Comparar con sus nudillos: 6, 10, 14, 18
+        for tip, pip in zip([8, 12, 16, 20], [6, 10, 14, 18]):
+            if hand.landmark[tip].y < hand.landmark[pip].y:
+                fingers.append(True) # Dedo levantado
+            else:
+                fingers.append(False)
+
+        # Lógica de gestos
+        if all(fingers): return "MANO_ABIERTA"
+        if fingers[0] and not any(fingers[1:]): return "MODO_MOUSE" # Solo índice
+        if not any(fingers): return "PUÑO"
+        
+        return None
