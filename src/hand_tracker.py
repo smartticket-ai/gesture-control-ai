@@ -3,7 +3,6 @@ import cv2
 
 class HandTracker:
     def __init__(self):
-        # ¡La forma oficial ahora sí funciona!
         self.mp_hands = mp.solutions.hands
         self.mp_draw = mp.solutions.drawing_utils
         
