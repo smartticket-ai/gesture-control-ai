@@ -1,8 +1,15 @@
-from .camera import Camera
-from .hand_tracker import HandTracker
-from .gesture_classifier import GestureClassifier
-from .controller import Controller
+import sys
+import os
 import cv2
+
+# ESTO SOLUCIONA TUS ERRORES DE IMPORTACIÓN
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(current_dir)
+
+from camera import Camera
+from hand_tracker import HandTracker
+from gesture_classifier import GestureClassifier
+from controller import Controller
 
 def main():
     cam = Camera()
@@ -10,23 +17,21 @@ def main():
     classifier = GestureClassifier()
     control = Controller()
 
+    print("Iniciando sistema... Presiona 'q' para salir.")
+
     while True:
         frame = cam.get_frame()
         if frame is None: break
 
         landmarks = tracker.detect(frame)
-        
         if landmarks:
             gesture = classifier.classify(landmarks)
             if gesture:
-                # Dibujamos el nombre del gesto en la pantalla
-                cv2.putText(frame, f"Gesto: {gesture}", (10, 50), 
+                cv2.putText(frame, gesture, (50, 50), 
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-                
-                # Ejecutamos la acción en el PC
                 control.execute(gesture, landmarks)
 
-        cv2.imshow("Sistema de Control Gestual", frame)
+        cv2.imshow("Gesture Control AI", frame)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
