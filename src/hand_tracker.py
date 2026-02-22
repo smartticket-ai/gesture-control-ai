@@ -1,8 +1,13 @@
 import mediapipe as mp
 import cv2
-# Importación directa para evitar errores de 'attribute' en Python 3.13
-from mediapipe.python.solutions import hands as mp_hands
-from mediapipe.python.solutions import drawing_utils as mp_draw
+
+# Intentamos la importación estándar primero, y la alternativa si falla
+try:
+    mp_hands = mp.solutions.hands
+    mp_draw = mp.solutions.drawing_utils
+except AttributeError:
+    from mediapipe.python.solutions import hands as mp_hands
+    from mediapipe.python.solutions import drawing_utils as mp_draw
 
 class HandTracker:
     def __init__(self):
@@ -16,17 +21,15 @@ class HandTracker:
         )
 
     def detect(self, frame):
-        # MediaPipe requiere que la imagen esté en RGB
+        # Convertir a RGB para MediaPipe
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = self.hands.process(rgb_frame)
         
         if results.multi_hand_landmarks:
             for hand_landmarks in results.multi_hand_landmarks:
-                # Dibujamos las conexiones de la mano
                 self.mp_draw.draw_landmarks(
                     frame, 
                     hand_landmarks, 
                     self.mp_hands.HAND_CONNECTIONS
                 )
         return results.multi_hand_landmarks
-
