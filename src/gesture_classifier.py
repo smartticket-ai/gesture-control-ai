@@ -1,33 +1,24 @@
-class GestureClassifier:
-    def __init__(self):
-        pass
+import mediapipe as mp
+import cv2
 
-    def classify(self, landmarks):
-        if not landmarks:
-            return None
+class HandTracker:
+    def __init__(self):
+        # Acceso directo a las soluciones de mediapipe
+        self.mp_hands = mp.solutions.hands
+        self.mp_draw = mp.solutions.drawing_utils
+        self.hands = self.mp_hands.Hands(
+            static_image_mode=False,
+            max_num_hands=1,
+            min_detection_confidence=0.7,
+            min_tracking_confidence=0.5
+        )
+
+    def detect(self, frame):
+        image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        results = self.hands.process(image_rgb)
         
-        # Obtenemos los puntos clave (Landmarks) de la primera mano detectada
-        hand = landmarks[0]
-        
-        # Lógica simple: Comparar la altura de las puntas de los dedos con sus nudillos
-        # Puntos MediaPipe: Índice (8), Medio (12), Anular (16), Meñique (20)
-        # Sus nudillos base: Índice (5), Medio (9), Anular (13), Meñique (17)
-        
-        fingers_up = []
-        
-        # Dedos: Índice, Medio, Anular, Meñique (coordenada Y disminuye al subir)
-        for tip, base in zip([8, 12, 16, 20], [5, 9, 13, 17]):
-            if hand.landmark[tip].y < hand.landmark[base].y:
-                fingers_up.append(True)
-            else:
-                fingers_up.append(False)
-        
-        # Definición de gestos básicos
-        if all(fingers_up):
-            return "MANO_ABIERTA"  # Todos los dedos arriba
-        if fingers_up[0] and not any(fingers_up[1:]):
-            return "SOLO_INDICE"   # Solo el índice arriba (Modo Mouse)
-        if not any(fingers_up):
-            return "PUÑO"          # Ningún dedo arriba
-            
-        return None
+        if results.multi_hand_landmarks:
+            for hand_landmarks in results.multi_hand_landmarks:
+                self.mp_draw.draw_landmarks(
+                    frame, hand_landmarks, self.mp_hands.HAND_CONNECTIONS)
+        return results.multi_hand_landmarks
