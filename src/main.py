@@ -11,12 +11,14 @@ from camera import Camera
 from hand_tracker import HandTracker
 from gesture_classifier import GestureClassifier
 from controller import Controller
+from camera_tracker import CameraTracker  # 🌟 IMPORTAMOS EL NUEVO TRACKER
 
 def main():
     cam = Camera()
     tracker = HandTracker()
     classifier = GestureClassifier()
     control = Controller()
+    cam_tracker = CameraTracker()  # 🌟 INICIALIZAMOS EL AUTO-FRAMING
 
     # Variables solo para el volumen
     last_volume_action_time = 0
@@ -35,6 +37,7 @@ def main():
 
         landmarks = tracker.detect(frame)
         stable_gesture = None
+        color = (0, 255, 0) # Color por defecto para el texto
         
         if landmarks:
             raw_gesture = classifier.classify(landmarks)
@@ -57,7 +60,7 @@ def main():
                     else:
                         color = (0, 255, 0)
                         
-                # 🌟 Lógica del clic (Ahora delega todo el control al Controller)
+                # Lógica del clic
                 elif stable_gesture == "CLICK":
                     control.execute(stable_gesture, landmarks)
                     color = (0, 0, 255) # Rojo
@@ -67,12 +70,20 @@ def main():
                     control.execute(stable_gesture, landmarks)
                     color = (0, 255, 0)
 
-                cv2.putText(frame, f"Gesto: {stable_gesture}", (20, 50), 
-                            cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
         else:
             gesture_buffer.clear()
 
-        cv2.imshow("Gesture Control AI", frame)
+        # 🌟 MAGIA DEL AUTO-FRAMING (ZOOM INTELIGENTE) 🌟
+        # Generamos el nuevo frame ajustado a las manos
+        frame_display = cam_tracker.process_frame(frame, landmarks)
+
+        # 🌟 DIBUJAR TEXTO (Después del zoom) 🌟
+        # Lo dibujamos en el frame_display para que el texto nunca se deforme ni se recorte
+        if stable_gesture:
+            cv2.putText(frame_display, f"Gesto: {stable_gesture}", (20, 50), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+
+        cv2.imshow("Gesture Control AI", frame_display)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
