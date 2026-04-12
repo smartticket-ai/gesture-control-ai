@@ -1,8 +1,10 @@
 import sys
 import os
 import cv2
+import time
+from collections import deque
+from statistics import mode
 
-# Asegura que Python encuentre tus otros archivos sin errores
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from camera import Camera
@@ -16,27 +18,62 @@ def main():
     classifier = GestureClassifier()
     control = Controller()
 
+    # Variables solo para el volumen
+    last_volume_action_time = 0
+    volume_cooldown = 0.2  
+    
+    gesture_buffer = deque(maxlen=7)
+
     print("Iniciando sistema... Presiona 'q' en la ventana de video para salir.")
 
     while True:
         frame = cam.get_frame()
-        # Si la cámara tarda en iniciar, evitamos que el programa explote
+        
         if frame is None: 
             cv2.waitKey(100)
             continue
 
         landmarks = tracker.detect(frame)
+        stable_gesture = None
+        
         if landmarks:
-            gesture = classifier.classify(landmarks)
-            if gesture:
-                # Mostrar el texto verde en pantalla
-                cv2.putText(frame, f"Gesto: {gesture}", (20, 50), 
-                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-                control.execute(gesture, landmarks)
+            raw_gesture = classifier.classify(landmarks)
+            
+            if raw_gesture:
+                gesture_buffer.append(raw_gesture)
+                stable_gesture = mode(gesture_buffer)
+            else:
+                gesture_buffer.clear()
+                
+            if stable_gesture:
+                current_time = time.time()
+                
+                # Lógica del Volumen
+                if stable_gesture in ["VOL_UP", "VOL_DOWN"]:
+                    if current_time - last_volume_action_time > volume_cooldown:
+                        control.execute(stable_gesture, landmarks)
+                        last_volume_action_time = current_time
+                        color = (255, 0, 0)
+                    else:
+                        color = (0, 255, 0)
+                        
+                # 🌟 Lógica del clic (Ahora delega todo el control al Controller)
+                elif stable_gesture == "CLICK":
+                    control.execute(stable_gesture, landmarks)
+                    color = (0, 0, 255) # Rojo
+                        
+                # Otros gestos
+                else:
+                    control.execute(stable_gesture, landmarks)
+                    color = (0, 255, 0)
+
+                cv2.putText(frame, f"Gesto: {stable_gesture}", (20, 50), 
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+        else:
+            gesture_buffer.clear()
 
         cv2.imshow("Gesture Control AI", frame)
 
-        # Cerrar con 'q'
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 

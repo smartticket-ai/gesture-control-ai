@@ -1,16 +1,20 @@
 import mediapipe as mp
 import cv2
+# Importaciones directas para evitar el error de AttributeError en Windows
+from mediapipe.python.solutions import hands as mp_hands
+from mediapipe.python.solutions import drawing_utils as mp_drawing
 
 class HandTracker:
     def __init__(self):
-        self.mp_hands = mp.solutions.hands
-        self.mp_draw = mp.solutions.drawing_utils
+        # Usamos las referencias directas que importamos arriba
+        self.mp_hands = mp_hands
+        self.mp_draw = mp_drawing
         
         self.hands = self.mp_hands.Hands(
             static_image_mode=False,
-            max_num_hands=1,
-            min_detection_confidence=0.7,
-            min_tracking_confidence=0.5
+            max_num_hands=2,  # 2 para detectar el Modo Jefe
+            min_detection_confidence=0.85, # Aumentado para evitar parpadeos
+            min_tracking_confidence=0.80   # Aumentado para seguir la mano con firmeza
         )
 
     def detect(self, frame):
