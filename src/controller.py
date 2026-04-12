@@ -13,12 +13,13 @@ class Controller:
         
         self.is_dragging = False 
         self.is_right_clicking = False
-        self.click_ready = True  # Seguro para evitar spam de clics normales
+        self.click_ready = True 
 
-    def _move_mouse(self, tip_landmark):
+    def _move_mouse(self, landmark_point):
+        # Usamos el punto que nos pasen (ahora será el nudillo)
         margin = 0.2
-        target_x = (tip_landmark.x - margin) / (1 - 2 * margin)
-        target_y = (tip_landmark.y - margin) / (1 - 2 * margin)
+        target_x = (landmark_point.x - margin) / (1 - 2 * margin)
+        target_y = (landmark_point.y - margin) / (1 - 2 * margin)
         
         target_x = max(0.0, min(1.0, target_x))
         target_y = max(0.0, min(1.0, target_y))
@@ -35,66 +36,63 @@ class Controller:
     def execute(self, gesture, landmarks):
         if not gesture or not landmarks: return
 
-        index_tip = landmarks[0].landmark[8]
-        middle_tip = landmarks[0].landmark[12]
+        # --- PUNTOS CLAVE DE LA MANO PRINCIPAL ---
+        index_tip = landmarks[0].landmark[8]    # Yema del índice (para scroll)
+        index_base = landmarks[0].landmark[5]   # NUEVO: Nudillo del índice (para mover mouse sin temblar)
+        middle_tip = landmarks[0].landmark[12]  # Yema del dedo medio (para arrastrar)
 
+        # Reset de scroll y clics
         if gesture != "MODO_SCROLL":
             self.prev_scroll_y = None
-
         if gesture != "RIGHT_CLICK":
             self.is_right_clicking = False
-            
-        # Reactivamos el clic normal cuando dejas de hacer la pinza del índice
         if gesture != "CLICK":
             self.click_ready = True
 
-        # --- LÓGICA DE SOLTAR EL ARRASTRE ---
+        # --- SOLTAR EL ARRASTRE ---
         if self.is_dragging and gesture != "DRAG":
             pyautogui.mouseUp()
             print("🖱️ Fin de arrastre")
             self.is_dragging = False
 
-        # --- CLICK NORMAL (Pulgar + Índice) ---
-        if gesture == "CLICK":
+        # --- MODO MOUSE (AHORA SIGUE AL NUDILLO) ---
+        if gesture == "MODO_MOUSE":
+            self._move_mouse(index_base) # <- MAGIA: El ratón ignora tu yema y sigue el nudillo
+
+        # --- CLICK NORMAL ---
+        elif gesture == "CLICK":
             if self.click_ready:
                 pyautogui.click()
-                print("🖱️ Clic Normal")
-                self.click_ready = False  # Bloqueamos hasta que se separen los dedos
+                print("🖱️ Clic Izquierdo estático")
+                self.click_ready = False  
 
-        # --- MODO ARRASTRE (Pulgar + Medio) ---
+        # --- MODO ARRASTRE ---
         elif gesture == "DRAG":
             if not self.is_dragging:
                 pyautogui.mouseDown()
                 print("🖱️ Inicio de arrastre")
                 self.is_dragging = True
-            
-            # Movemos el ratón guiándonos por el dedo medio mientras arrastramos
             self._move_mouse(middle_tip)
 
-        # --- MOVIMIENTO DEL RATÓN NORMAL ---
-        elif gesture == "MODO_MOUSE":
-            self._move_mouse(index_tip)
-
-        # --- CLICK DERECHO (Con 2 manos) ---
-        elif gesture == "RIGHT_CLICK":
-            if not self.is_right_clicking:
-                pyautogui.click(button='right')
-                print("🖱️ Clic Derecho ejecutado")
-                self.is_right_clicking = True
-
-        # --- VOLUMEN ---
-        elif gesture == "VOL_UP":
-            pyautogui.press("volumeup")
-        elif gesture == "VOL_DOWN":
-            pyautogui.press("volumedown")
-
-        # --- RUEDA DE SCROLL ---
+        # --- MODO SCROLL ---
         elif gesture == "MODO_SCROLL":
             index_y = index_tip.y
             if self.prev_scroll_y is None or abs(index_y - self.prev_scroll_y) > 0.2:
                 self.prev_scroll_y = index_y
-                
             delta_y = index_y - self.prev_scroll_y
             if abs(delta_y) > 0.01:
                 pyautogui.scroll(int(-delta_y * 3000)) 
-                self.prev_scroll_y = index_y
+                self.prev_scroll_y = index_y 
+
+        # --- CONTROLES DE LA SEGUNDA MANO ---
+        elif gesture == "RIGHT_CLICK":
+            if not self.is_right_clicking:
+                pyautogui.click(button='right')
+                print("🖱️ Clic Derecho")
+                self.is_right_clicking = True
+
+        elif gesture == "VOL_UP":
+            pyautogui.press("volumeup")
+            
+        elif gesture == "VOL_DOWN":
+            pyautogui.press("volumedown")

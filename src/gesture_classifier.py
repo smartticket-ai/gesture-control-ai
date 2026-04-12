@@ -1,61 +1,59 @@
 import math
 
 class GestureClassifier:
-    def classify(self, landmarks):
-        if not landmarks:
-            return None
-        
-        # --- CLICK DERECHO (Mostrar las dos manos) ---
-        if len(landmarks) == 2:
-            return "RIGHT_CLICK"
-            
-        hand = landmarks[0]
+    
+    def _get_fingers_up(self, hand):
         fingers = []
-
-        # 1. Analizar dedos (Índice a Meñique)
         for tip, pip in zip([8, 12, 16, 20], [6, 10, 14, 18]):
             if hand.landmark[tip].y < hand.landmark[pip].y:
                 fingers.append(True)
             else:
                 fingers.append(False)
+        return fingers
 
-        # 2. Distancias para las pinzas
-        # Pinza Índice (Para Clic Normal)
-        dist_pinza_indice = math.hypot(hand.landmark[4].x - hand.landmark[8].x, hand.landmark[4].y - hand.landmark[8].y)
-        pinza_indice_cerrada = dist_pinza_indice < 0.08  
+    def classify(self, landmarks):
+        if not landmarks:
+            return None
         
-        # Pinza Medio (Para Arrastrar)
-        dist_pinza_medio = math.hypot(hand.landmark[4].x - hand.landmark[12].x, hand.landmark[4].y - hand.landmark[12].y)
+        # --- MODO 2 MANOS (Volumen y Clic Derecho) ---
+        if len(landmarks) >= 2:
+            hand2 = landmarks[1] 
+            f2 = self._get_fingers_up(hand2)
+            
+            es_puno_m2 = not any(f2)
+            pulgar_arriba_m2 = es_puno_m2 and hand2.landmark[4].y < hand2.landmark[5].y - 0.04
+            pulgar_abajo_m2 = es_puno_m2 and hand2.landmark[4].y > hand2.landmark[0].y + 0.04
+            
+            if pulgar_arriba_m2:
+                return "VOL_UP"
+            elif pulgar_abajo_m2:
+                return "VOL_DOWN"
+            elif es_puno_m2:
+                return "RIGHT_CLICK"
+
+        # --- MODO 1 MANO (Mouse Exclusivo) ---
+        hand1 = landmarks[0]
+        f1 = self._get_fingers_up(hand1)
+
+        dist_pinza_medio = math.hypot(hand1.landmark[4].x - hand1.landmark[12].x, hand1.landmark[4].y - hand1.landmark[12].y)
         pinza_medio_cerrada = dist_pinza_medio < 0.08
 
-        # 3. Lógica de Volumen
-        indice_y_medio_bajados = not fingers[0] and not fingers[1]
-        pulgar_arriba = hand.landmark[4].y < hand.landmark[5].y - 0.02
-        pulgar_abajo = hand.landmark[4].y > hand.landmark[0].y + 0.02
+        es_puno_m1 = not any(f1)
 
-        # --- REGLAS DE GESTOS ---
-        
-        # 1. CLICK NORMAL (Pulgar + Índice)
-        if pinza_indice_cerrada:
+        # 1. CLICK IZQUIERDO NORMAL (Puño)
+        if es_puno_m1:
             return "CLICK"
-            
+
         # 2. MODO ARRASTRE (Pulgar + Medio)
         if pinza_medio_cerrada:
             return "DRAG"
 
-        # 3. GESTOS DE VOLUMEN
-        if indice_y_medio_bajados:
-            if pulgar_arriba:
-                return "VOL_UP"
-            elif pulgar_abajo:
-                return "VOL_DOWN"
-
-        # 4. SCROLL (Índice y Medio levantados, Anular y Meñique bajados)
-        if fingers[0] and fingers[1] and not fingers[2] and not fingers[3]:
+        # 3. SCROLL (Índice y Medio levantados)
+        if f1[0] and f1[1] and not f1[2] and not f1[3]:
             return "MODO_SCROLL"
 
-        # 5. MOVIMIENTO DEL MOUSE NORMAL (Solo Índice levantado)
-        if fingers[0] and not any(fingers[1:]): 
+        # 4. MODO MOUSE (Solo Índice levantado)
+        if f1[0] and not any(f1[1:]): 
             return "MODO_MOUSE"
         
         return None
